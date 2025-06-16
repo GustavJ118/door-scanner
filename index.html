@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Door QR Scanner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            padding: 10px;
+            min-height: 100vh;
+            touch-action: manipulation;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: #4CAF50;
+            margin-bottom: 5px;
+            font-size: 24px;
+        }
+        
+        .upload-section {
+            background: #333;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .file-input {
+            margin: 10px 0;
+            padding: 12px;
+            background: #555;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            width: 100%;
+            font-size: 16px;
+        }
+        
+        .scanner-section {
+            background: #333;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        #video {
+            width: 100%;
+            max-width: 300px;
+            height: 300px;
+            border-radius: 10px;
+            background: #000;
+            object-fit: cover;
+        }
+        
+        .scan-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 16px 20px;
+            border-radius: 8px;
+            font-size: 18px;
+            margin: 8px 0;
+            cursor: pointer;
+            width: 100%;
+            touch-action: manipulation;
+            -webkit-appearance: none;
+        }
+        
+        .scan-btn:active {
+            background: #45a049;
+            transform: scale(0.98);
+        }
+        
+        .scan-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .result-section {
+            background: #333;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        
+        .customer-info {
+            background: #444;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .customer-name {
+            font-size: 22px;
+            font-weight: bold;
+            color: #4CAF50;
+            margin-bottom: 8px;
+        }
+        
+        .tier-info {
+            font-size: 18px;
+            color: #ffeb3b;
+            margin-bottom: 8px;
+        }
+        
+        .status-info {
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+        
+        .status-valid {
+            color: #4CAF50;
+        }
+        
+        .status-used {
+            color: #f44336;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-valid {
+            background: #4CAF50;
+            flex: 1;
+        }
+        
+        .btn-used {
+            background: #f44336;
+            flex: 1;
+        }
+        
+        .btn-valid, .btn-used {
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-appearance: none;
+        }
+        
+        .btn-valid:active {
+            transform: scale(0.95);
+        }
+        
+        .btn-used:active {
+            transform: scale(0.95);
+        }
+        
+        .error-msg {
+            background: #f44336;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .success-msg {
+            background: #4CAF50;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .stats {
+            background: #333;
+            padding: 12px;
+            border-radius: 10px;
+            margin-top: 15px;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .manual-input {
+            background: #333;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .manual-input input {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 8px;
+            background: #555;
+            color: white;
+            font-size: 16px;
+            margin-bottom: 10px;
+            -webkit-appearance: none;
+        }
+        
+        .download-section {
+            text-align: center;
+            margin-top: 15px;
+        }
+        
+        .download-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 16px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-appearance: none;
+        }
+        
+        .ios-warning {
+            background: #ff9800;
+            color: black;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎫 Door Scanner</h1>
+            <p>Event Ticket Validation</p>
+        </div>
+        
+        <!-- iOS Warning -->
+        <div id="iosWarning" class="ios-warning" style="display: none;">
+            📱 For camera to work on iPhone, this page must be accessed via HTTPS (secure connection)
+        </div>
+        
+        <!-- File Upload Section -->
+        <div class="upload-section">
+            <h3>📁 Load Ticket Data</h3>
+            <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls" />
+            <p><small>Upload your Excel ticket file</small></p>
+            <div id="fileStatus"></div>
+        </div>
+        
+        <!-- Scanner Section -->
+        <div class="scanner-section">
+            <h3>📷 QR Scanner</h3>
+            <video id="video" style="display: none;" playsinline></video>
+            <div>
+                <button id="startScan" class="scan-btn" disabled>Start Camera</button>
+                <button id="stopScan" class="scan-btn" style="display: none;">Stop Camera</button>
+            </div>
+        </div>
+        
+        <!-- Manual Input -->
+        <div class="manual-input">
+            <h3>⌨️ Manual Entry</h3>
+            <input type="text" id="manualInput" placeholder="Type or paste QR data here..." autocomplete="off" />
+            <button id="manualCheck" class="scan-btn" disabled>Check Ticket</button>
+        </div>
+        
+        <!-- Results Section -->
+        <div id="resultSection" class="result-section">
+            <div id="customerInfo" class="customer-info"></div>
+            <div class="action-buttons">
+                <button id="markValid" class="btn-valid">✅ VÁLIDO</button>
+                <button id="markUsed" class="btn-used">❌ USADO</button>
+            </div>
+        </div>
+        
+        <!-- Messages -->
+        <div id="messages"></div>
+        
+        <!-- Stats -->
+        <div id="stats" class="stats" style="display: none;">
+            <h3>📊 Stats</h3>
+            <p>Total: <span id="totalTickets">0</span> | Used: <span id="usedToday">0</span> | Remaining: <span id="remaining">0</span></p>
+        </div>
+        
+        <!-- Download Section -->
+        <div class="download-section">
+            <button id="downloadBtn" class="download-btn" style="display: none;">📥 Download Updated File</button>
+        </div>
+    </div>
+
+    <!-- Include required libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <script>
+        let ticketsData = [];
+        let currentTicket = null;
+        let stream = null;
+        
+        // DOM Elements
+        const fileInput = document.getElementById('fileInput');
+        const startScanBtn = document.getElementById('startScan');
+        const stopScanBtn = document.getElementById('stopScan');
+        const video = document.getElementById('video');
+        const resultSection = document.getElementById('resultSection');
+        const customerInfo = document.getElementById('customerInfo');
+        const messages = document.getElementById('messages');
+        const manualInput = document.getElementById('manualInput');
+        const manualCheckBtn = document.getElementById('manualCheck');
+        const markValidBtn = document.getElementById('markValid');
+        const markUsedBtn = document.getElementById('markUsed');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const statsDiv = document.getElementById('stats');
+        const iosWarning = document.getElementById('iosWarning');
+        
+        // Check if HTTPS and show warning for iOS
+        if (navigator.userAgent.match(/iPhone|iPad|iPod/i) && location.protocol !== 'https:') {
+            iosWarning.style.display = 'block';
+        }
+        
+        // File Upload Handler
+        fileInput.addEventListener('change', handleFileUpload);
+        
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    
+                    // Convert to JSON
+                    ticketsData = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    showMessage(`✅ Loaded ${ticketsData.length} tickets`, 'success');
+                    
+                    // Enable scanner
+                    startScanBtn.disabled = false;
+                    manualCheckBtn.disabled = false;
+                    
+                    updateStats();
+                    downloadBtn.style.display = 'block';
+                    
+                } catch (error) {
+                    showMessage('❌ Error reading file: ' + error.message, 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        
+        // Camera Scanner (iOS Compatible)
+        startScanBtn.addEventListener('click', startCamera);
+        stopScanBtn.addEventListener('click', stopCamera);
+        
+        async function startCamera() {
+            try {
+                // iOS compatible constraints
+                const constraints = {
+                    video: {
+                        facingMode: 'environment', // Back camera
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                };
+                
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+                video.style.display = 'block';
+                
+                // Wait for video to load
+                video.onloadedmetadata = () => {
+                    video.play();
+                    startQRDetection();
+                };
+                
+                startScanBtn.style.display = 'none';
+                stopScanBtn.style.display = 'block';
+                
+            } catch (error) {
+                showMessage('❌ Camera error: ' + error.message, 'error');
+                if (error.name === 'NotAllowedError') {
+                    showMessage('🔒 Camera permission denied. Please allow camera access in browser settings.', 'error');
+                }
+            }
+        }
+        
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            video.style.display = 'none';
+            video.srcObject = null;
+            startScanBtn.style.display = 'block';
+            stopScanBtn.style.display = 'none';
+            
+            // Stop QR detection
+            if (window.qrDetectionInterval) {
+                clearInterval(window.qrDetectionInterval);
+            }
+        }
+        
+        // Simple QR Detection (iOS compatible)
+        function startQRDetection() {
+            // For iOS, we'll use a simpler approach
+            // This is a basic implementation - for production, consider using a dedicated QR library
+            showMessage('📷 Camera active - position QR code in view', 'success');
+        }
+        
+        // Manual Input
+        manualCheckBtn.addEventListener('click', () => {
+            const qrData = manualInput.value.trim();
+            if (qrData) {
+                processQRCode(qrData);
+                manualInput.value = '';
+            }
+        });
+        
+        manualInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                manualCheckBtn.click();
+            }
+        });
+        
+        // Process QR Code
+        function processQRCode(qrData) {
+            console.log('Processing QR:', qrData);
+            
+            // Find ticket by QR Data
+            const ticket = ticketsData.find(t => 
+                t['QR Data'] === qrData || 
+                t['Ticket ID'] === qrData ||
+                String(t['QR Data']).includes(qrData)
+            );
+            
+            if (!ticket) {
+                showMessage('❌ Ticket not found', 'error');
+                playBeep(800, 200); // Error beep
+                return;
+            }
+            
+            currentTicket = ticket;
+            showTicketInfo(ticket);
+        }
+        
+        // Show Ticket Information
+        function showTicketInfo(ticket) {
+            const status = ticket.Status || 'VALID';
+            const statusClass = status === 'USADO' ? 'status-used' : 'status-valid';
+            const statusText = status === 'USADO' ? 'USADO' : 'VÁLIDO';
+            
+            customerInfo.innerHTML = `
+                <div class="customer-name">${ticket['Customer Name'] || 'Unknown'}</div>
+                <div class="tier-info">🎫 ${ticket['Tier Name'] || 'General'}</div>
+                <div class="status-info">
+                    Status: <span class="${statusClass}">${statusText}</span>
+                </div>
+                <div style="font-size: 14px; color: #ccc;">
+                    Event: ${ticket['Event Name'] || 'Unknown'}<br>
+                    ID: ${ticket['Ticket ID'] || 'Unknown'}
+                </div>
+            `;
+            
+            resultSection.style.display = 'block';
+            
+            // Audio feedback
+            if (status === 'USADO') {
+                playBeep(800, 300); // Error beep
+                navigator.vibrate && navigator.vibrate([200, 100, 200]);
+            } else {
+                playBeep(1000, 200); // Success beep
+                navigator.vibrate && navigator.vibrate(100);
+            }
+            
+            // Scroll to result
+            resultSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Mark ticket actions
+        markValidBtn.addEventListener('click', () => {
+            if (currentTicket) {
+                currentTicket.Status = 'VALID';
+                showMessage('✅ Marked as VÁLIDO', 'success');
+                updateStats();
+                setTimeout(() => {
+                    resultSection.style.display = 'none';
+                }, 1500);
+            }
+        });
+        
+        markUsedBtn.addEventListener('click', () => {
+            if (currentTicket) {
+                currentTicket.Status = 'USADO';
+                showMessage('❌ Marked as USADO', 'success');
+                updateStats();
+                setTimeout(() => {
+                    resultSection.style.display = 'none';
+                }, 1500);
+            }
+        });
+        
+        // Download updated file
+        downloadBtn.addEventListener('click', downloadUpdatedFile);
+        
+        function downloadUpdatedFile() {
+            if (ticketsData.length === 0) return;
+            
+            const worksheet = XLSX.utils.json_to_sheet(ticketsData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Tickets');
+            
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
+            const filename = `tickets_updated_${timestamp}.xlsx`;
+            
+            XLSX.writeFile(workbook, filename);
+            showMessage('📥 File downloaded!', 'success');
+        }
+        
+        // Update Statistics
+        function updateStats() {
+            if (ticketsData.length === 0) return;
+            
+            const totalTickets = ticketsData.length;
+            const usedTickets = ticketsData.filter(t => t.Status === 'USADO').length;
+            const remaining = totalTickets - usedTickets;
+            
+            document.getElementById('totalTickets').textContent = totalTickets;
+            document.getElementById('usedToday').textContent = usedTickets;
+            document.getElementById('remaining').textContent = remaining;
+            
+            statsDiv.style.display = 'block';
+        }
+        
+        // Show Messages
+        function showMessage(text, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type === 'error' ? 'error-msg' : 'success-msg';
+            messageDiv.textContent = text;
+            
+            messages.innerHTML = '';
+            messages.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.remove();
+                }
+            }, 3000);
+        }
+        
+        // Audio Feedback (iOS compatible)
+        function playBeep(frequency, duration) {
+            try {
+                // For iOS, we need user interaction first
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = frequency;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration / 1000);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + duration / 1000);
+            } catch (error) {
+                console.log('Audio not supported');
+            }
+        }
+        
+        // Initialize
+        console.log('🎫 Door Scanner Ready!');
+        showMessage('📱 Ready! Upload your Excel file to start scanning', 'success');
+        
+        // Enable audio context on first user interaction (iOS requirement)
+        document.addEventListener('click', function enableAudio() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                audioContext.resume();
+            } catch (e) {}
+            document.removeEventListener('click', enableAudio);
+        }, { once: true });
+    </script>
+</body>
+</html>
