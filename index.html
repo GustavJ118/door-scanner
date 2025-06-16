@@ -71,6 +71,12 @@
             border-radius: 10px;
             background: #000;
             object-fit: cover;
+            border: 3px solid transparent;
+        }
+        
+        #video.scanning {
+            border-color: #4CAF50;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
         }
         
         .scan-btn {
@@ -309,11 +315,15 @@
 
     <!-- Include required libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     
     <script>
         let ticketsData = [];
         let currentTicket = null;
         let stream = null;
+        let scanning = false;
+        let canvas = null;
+        let canvasContext = null;
         
         // DOM Elements
         const fileInput = document.getElementById('fileInput');
@@ -389,9 +399,18 @@
                 video.srcObject = stream;
                 video.style.display = 'block';
                 
+                // Create canvas for QR detection
+                if (!canvas) {
+                    canvas = document.createElement('canvas');
+                    canvasContext = canvas.getContext('2d');
+                }
+                
                 // Wait for video to load
                 video.onloadedmetadata = () => {
                     video.play();
+                    // Set canvas size to match video
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
                     startQRDetection();
                 };
                 
@@ -407,6 +426,9 @@
         }
         
         function stopCamera() {
+            scanning = false;
+            video.classList.remove('scanning');
+            
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
                 stream = null;
@@ -415,18 +437,55 @@
             video.srcObject = null;
             startScanBtn.style.display = 'block';
             stopScanBtn.style.display = 'none';
-            
-            // Stop QR detection
-            if (window.qrDetectionInterval) {
-                clearInterval(window.qrDetectionInterval);
-            }
         }
         
-        // Simple QR Detection (iOS compatible)
+        // QR Detection with jsQR
         function startQRDetection() {
-            // For iOS, we'll use a simpler approach
-            // This is a basic implementation - for production, consider using a dedicated QR library
-            showMessage('📷 Camera active - position QR code in view', 'success');
+            scanning = true;
+            video.classList.add('scanning');
+            showMessage('📷 Scanning for QR codes...', 'success');
+            scanQRCode();
+        }
+        
+        function scanQRCode() {
+            if (!scanning || !video || video.readyState !== video.HAVE_ENOUGH_DATA) {
+                if (scanning) {
+                    requestAnimationFrame(scanQRCode);
+                }
+                return;
+            }
+            
+            // Update canvas size if needed
+            if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+            }
+            
+            // Draw video frame to canvas
+            canvasContext.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Get image data for QR scanning
+            const imageData = canvasContext.getImageData(0, 0, canvas.width, canvas.height);
+            
+            // Scan for QR code
+            const qrCode = jsQR(imageData.data, imageData.width, imageData.height);
+            
+            if (qrCode) {
+                console.log('QR Code detected:', qrCode.data);
+                scanning = false; // Stop scanning temporarily
+                processQRCode(qrCode.data);
+                
+                // Resume scanning after 2 seconds
+                setTimeout(() => {
+                    if (stream) { // Only resume if camera is still active
+                        scanning = true;
+                        scanQRCode();
+                    }
+                }, 2000);
+            } else {
+                // Continue scanning
+                requestAnimationFrame(scanQRCode);
+            }
         }
         
         // Manual Input
@@ -449,15 +508,19 @@
         function processQRCode(qrData) {
             console.log('Processing QR:', qrData);
             
+            // Visual feedback for successful scan
+            showMessage('🎯 QR Code scanned!', 'success');
+            
             // Find ticket by QR Data
             const ticket = ticketsData.find(t => 
                 t['QR Data'] === qrData || 
                 t['Ticket ID'] === qrData ||
-                String(t['QR Data']).includes(qrData)
+                String(t['QR Data']).includes(qrData) ||
+                String(qrData).includes(t['Ticket ID'])
             );
             
             if (!ticket) {
-                showMessage('❌ Ticket not found', 'error');
+                showMessage('❌ Ticket not found: ' + qrData.substring(0, 20) + '...', 'error');
                 playBeep(800, 200); // Error beep
                 return;
             }
